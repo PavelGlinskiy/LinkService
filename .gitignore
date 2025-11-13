@@ -1,0 +1,69 @@
+### Java ###
+*.class
+*.jar
+*.war
+*.ear
+*.log
+*.iml
+*.ipr
+*.iws
+
+### Maven ###
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+
+### Gradle ###
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+### IDEs ###
+# IntelliJ IDEA
+.idea/
+*.iml
+out/
+
+# Eclipse
+.project
+.classpath
+.settings/
+bin/
+
+# VS Code
+.vscode/
+
+### Logs and temp files ###
+logs/
+*.log
+*.tmp
+*.swp
+*.bak
+*.pid
+
+### OS generated ###
+.DS_Store
+Thumbs.db
+
+### Environment files ###
+.env
+*.env
+.env.local
+application-local.yml
+application-secrets.yml
+application-dev.yml
+application-prod.yml
+
+### Test artifacts ###
+test-output/
+surefire-reports/
+jacoco.exec
+
+### Docker ###
+*.pid
+docker-compose.override.yml
