@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+          http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="1" author="Pavel Glinskiy">
+
+        <createTable tableName="url_mapping">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <column name="short_code" type="VARCHAR(128)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+
+            <column name="original_url" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="alias" type="VARCHAR(128)">
+                <constraints unique="true"/>
+            </column>
+
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="expires_at" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+
+        <createIndex tableName="url_mapping" indexName="idx_short_code" unique="true">
+            <column name="short_code"/>
+        </createIndex>
+
+        <createIndex tableName="url_mapping" indexName="idx_alias" unique="true">
+            <column name="alias"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>
