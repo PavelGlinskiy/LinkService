@@ -1,10 +1,20 @@
 package org.writer.linkservice.entity;
 
-import jakarta.persistence.*;
+
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.time.Instant;
+import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "url_mapping", indexes = {
@@ -14,6 +24,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
+@Builder
 public class UrlMapping {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,21 +39,21 @@ public class UrlMapping {
     @Column(name = "alias", length = 64, unique = true)
     private String alias;
 
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private OffsetDateTime createdAt;
 
     @Column(name = "expires_at")
-    private Instant expiresAt;
+    private OffsetDateTime expiresAt;
 
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {
-            createdAt = Instant.now();
+            createdAt = OffsetDateTime.now();
         }
     }
 
     public boolean isExpired() {
-        return expiresAt != null && expiresAt.isBefore(Instant.now());
+        return expiresAt != null && expiresAt.isBefore(OffsetDateTime.now());
     }
 
     public boolean isPermanent() {

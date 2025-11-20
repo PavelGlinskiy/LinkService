@@ -6,18 +6,20 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.writer.linkservice.controller.ApiController;
 import org.writer.linkservice.controller.RedirectController;
 import org.writer.linkservice.entity.UrlMapping;
+import org.writer.linkservice.exception.ExpiredShortUrlException;
+import org.writer.linkservice.exception.NotFoundShortUrlException;
 import org.writer.linkservice.service.UrlService;
-import org.springframework.http.MediaType;
-import java.util.Optional;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
-@WebMvcTest(controllers = { ApiController.class, RedirectController.class })
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@WebMvcTest(controllers = {ApiController.class, RedirectController.class})
 public class UrlControllerTest {
 
     @Autowired
@@ -29,9 +31,10 @@ public class UrlControllerTest {
     @Test
     @DisplayName("POST /api/shorten — returns short code")
     void createShortLink_ReturnsShortCode() throws Exception {
-        UrlMapping mapping = new UrlMapping();
-        mapping.setShortCode("xyz123");
-        mapping.setOriginalUrl("https://google.com");
+        UrlMapping mapping = UrlMapping.builder()
+                .shortCode("xyz123")
+                .originalUrl("https://google.com")
+                .build();
 
         Mockito.when(urlService.createShortLink("https://google.com", null, null))
                 .thenReturn(mapping);
@@ -48,13 +51,10 @@ public class UrlControllerTest {
     }
 
     @Test
+    @DisplayName("GET /{code} — redirects to original URL")
     void redirectToOriginal_Redirects() throws Exception {
-        UrlMapping mapping = new UrlMapping();
-        mapping.setShortCode("xyz123");
-        mapping.setOriginalUrl("https://google.com");
-
-        Mockito.when(urlService.findValidByShortCode("xyz123"))
-                .thenReturn(Optional.of(mapping));
+        Mockito.when(urlService.getValidByShortCode("xyz123"))
+                .thenReturn("https://google.com");
 
         mockMvc.perform(get("/xyz123"))
                 .andExpect(status().is3xxRedirection())
@@ -64,11 +64,20 @@ public class UrlControllerTest {
     @Test
     @DisplayName("GET /{code} — returns 404 if not found")
     void redirect_NotFound() throws Exception {
-
-        Mockito.when(urlService.findValidByShortCode("bad123"))
-                .thenReturn(Optional.empty());
+        Mockito.when(urlService.getValidByShortCode("bad123"))
+                .thenThrow(new NotFoundShortUrlException("bad123"));
 
         mockMvc.perform(get("/bad123"))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("GET /{code} — returns 410 if expired")
+    void redirect_Expired() throws Exception {
+        Mockito.when(urlService.getValidByShortCode("expired"))
+                .thenThrow(new ExpiredShortUrlException("expired"));
+
+        mockMvc.perform(get("/expired"))
+                .andExpect(status().isGone());
     }
 }

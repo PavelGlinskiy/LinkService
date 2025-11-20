@@ -1,7 +1,6 @@
 package org.writer.linkservice.controller;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,9 +11,10 @@ import org.writer.linkservice.dto.UrlResponse;
 import org.writer.linkservice.entity.UrlMapping;
 import org.writer.linkservice.service.UrlService;
 
+
 @RestController
 @RequestMapping("/api")
-@Slf4j
+
 public class ApiController {
     private final UrlService urlService;
 
@@ -23,20 +23,23 @@ public class ApiController {
     }
 
     @PostMapping("/shorten")
-    public ResponseEntity<UrlResponse> shorten(@RequestBody UrlRequest request, UriComponentsBuilder uriBuilder) {
+    public UrlResponse shorten(@Valid @RequestBody UrlRequest request, UriComponentsBuilder uriBuilder) {
+
             UrlMapping mapping = urlService.createShortLink(
                     request.getUrl(),
                     request.getAlias(),
                     request.getTtlSeconds()
             );
 
-            String shortPath = mapping.getShortCode();
-            String shortUrl = uriBuilder.path("/{code}")
-                    .buildAndExpand(shortPath)
-                    .toUriString();
+        String shortUrl = uriBuilder
+                .replacePath("/{code}")
+                .buildAndExpand(mapping.getShortCode())
+                .toUriString();
 
-            return ResponseEntity.ok(
-                    new UrlResponse(shortUrl, mapping.getAlias(), mapping.getExpiresAt())
-            );
+        return new UrlResponse(
+                shortUrl,
+                mapping.getAlias(),
+                mapping.getExpiresAt()
+        );
     }
 }

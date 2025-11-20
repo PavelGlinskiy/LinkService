@@ -10,13 +10,14 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.writer.linkservice.entity.UrlMapping;
+import org.writer.linkservice.exception.ExpiredShortUrlException;
+import org.writer.linkservice.exception.NotFoundShortUrlException;
 import org.writer.linkservice.repository.UrlMappingRepository;
 import org.writer.linkservice.service.UrlService;
-import java.time.Instant;
-import java.util.Optional;
+
+import java.time.OffsetDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
-
 
 @Testcontainers
 @SpringBootTest
@@ -46,7 +47,6 @@ public class UrlServiceIntegrationTest {
         repository.deleteAll();
     }
 
-
     @Test
     void createShortLink_WithAlias_SavesAndFinds() {
         UrlMapping mapping = urlService.createShortLink("https://example.com", "myalias", 3600L);
@@ -56,9 +56,8 @@ public class UrlServiceIntegrationTest {
         assertNotNull(mapping.getCreatedAt());
         assertNotNull(mapping.getExpiresAt());
 
-        Optional<UrlMapping> found = urlService.findValidByShortCode("myalias");
-        assertTrue(found.isPresent());
-        assertEquals("https://example.com", found.get().getOriginalUrl());
+        String originalUrl = urlService.getValidByShortCode("myalias");
+        assertEquals("https://example.com", originalUrl);
     }
 
     @Test
@@ -69,21 +68,28 @@ public class UrlServiceIntegrationTest {
         assertNull(mapping.getAlias());
         assertNull(mapping.getExpiresAt());
 
-        Optional<UrlMapping> found = urlService.findValidByShortCode(mapping.getShortCode());
-        assertTrue(found.isPresent());
-        assertEquals("https://example.com", found.get().getOriginalUrl());
+        String originalUrl = urlService.getValidByShortCode(mapping.getShortCode());
+        assertEquals("https://example.com", originalUrl);
     }
 
     @Test
-    void findValidByShortCode_ReturnsEmpty_WhenExpired() {
-        UrlMapping mapping = new UrlMapping();
-        mapping.setShortCode("expired");
-        mapping.setOriginalUrl("https://example.com");
-        mapping.setCreatedAt(Instant.now());
-        mapping.setExpiresAt(Instant.now().minusSeconds(10));
+    void getValidByShortCode_ThrowsExpiredShortUrlException_WhenExpired() {
+        UrlMapping mapping = UrlMapping.builder()
+                .shortCode("expired")
+                .originalUrl("https://example.com")
+                .createdAt(OffsetDateTime.now().minusMinutes(10))
+                .expiresAt(OffsetDateTime.now().minusSeconds(10))
+                .build();
+
         repository.save(mapping);
 
-        Optional<UrlMapping> found = urlService.findValidByShortCode("expired");
-        assertFalse(found.isPresent());
+        assertThrows(ExpiredShortUrlException.class, () ->
+                urlService.getValidByShortCode("expired"));
+    }
+
+    @Test
+    void getValidByShortCode_ThrowsNotFoundShortUrlException_WhenMissing() {
+        assertThrows(NotFoundShortUrlException.class, () ->
+                urlService.getValidByShortCode("missing"));
     }
 }
