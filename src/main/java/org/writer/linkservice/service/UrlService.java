@@ -32,36 +32,32 @@ public class UrlService {
         }
 
         if (alias != null && !alias.isBlank()) {
-            return createWithAlias(originalUrl, alias, ttlSeconds);
-        }
-
-        return createWithRandomCode(originalUrl, ttlSeconds);
-    }
-
-    private UrlMapping createWithAlias(String originalUrl, String alias, Long ttlSeconds) {
-        UrlMapping mapping = buildMapping(originalUrl, alias, alias, ttlSeconds);
-        try {
-            return repository.save(mapping);
-        } catch (DataIntegrityViolationException ex) {
-            throw new AliasAlreadyInUseException(alias);
-        }
-    }
-
-    private UrlMapping createWithRandomCode(String originalUrl, Long ttlSeconds) {
-        String code = generateUniqueShortCode();
-        UrlMapping mapping = buildMapping(originalUrl, code, null, ttlSeconds);
-        return repository.save(mapping);
-    }
-
-    private String generateUniqueShortCode() {
-        int codeLength = defaultCodeLength;
-        for (int attempt = 0; attempt < 10; attempt++) {
-            String code = ShortCodeGenerator.randomCode(codeLength);
-            if (!repository.existsByShortCode(code)) {
-                return code;
+            UrlMapping mapping = buildMapping(originalUrl, alias, alias, ttlSeconds);
+            try {
+                return repository.save(mapping);
+            } catch (DataIntegrityViolationException ex) {
+                throw new AliasAlreadyInUseException(alias);
             }
         }
-        return ShortCodeGenerator.randomCode(defaultCodeLength + 3);
+        return createWithGeneratedShortCode(originalUrl, ttlSeconds);
+    }
+
+    private UrlMapping createWithGeneratedShortCode(String originalUrl, Long ttlSeconds) {
+
+        int attempts = 0;
+
+        while (attempts < 20) {
+            String code = ShortCodeGenerator.randomCode(defaultCodeLength + (attempts > 10 ? 3 : 0));
+
+            UrlMapping mapping = buildMapping(originalUrl, code, null, ttlSeconds);
+
+            try {
+                return repository.saveAndFlush(mapping);
+            } catch (DataIntegrityViolationException ex) {
+                attempts++;
+            }
+        }
+        throw new RuntimeException("Failed to generate unique short code after many attempts");
     }
 
     private UrlMapping buildMapping(String originalUrl, String shortCode, String alias, Long ttlSeconds) {

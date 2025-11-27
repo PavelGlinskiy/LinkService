@@ -4,12 +4,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.writer.linkservice.entity.UrlMapping;
+import org.writer.linkservice.exception.EmptyOriginalUrlException;
 import org.writer.linkservice.exception.ExpiredShortUrlException;
 import org.writer.linkservice.exception.NotFoundShortUrlException;
 import org.writer.linkservice.repository.UrlMappingRepository;
@@ -91,5 +93,61 @@ public class UrlServiceIntegrationTest {
     void getValidByShortCode_ThrowsNotFoundShortUrlException_WhenMissing() {
         assertThrows(NotFoundShortUrlException.class, () ->
                 urlService.getValidByShortCode("missing"));
+    }
+
+    @Test
+    void createShortLink_ThrowsDataIntegrityViolation_WhenDuplicateShortCode() {
+        UrlMapping first = UrlMapping.builder()
+                .originalUrl("https://example.com/1")
+                .shortCode("duplicateCode")
+                .alias(null)
+                .build();
+        repository.saveAndFlush(first);
+
+        UrlMapping second = UrlMapping.builder()
+                .originalUrl("https://example.com/2")
+                .shortCode("duplicateCode")
+                .alias(null)
+                .build();
+
+        assertThrows(DataIntegrityViolationException.class, () ->
+                repository.saveAndFlush(second));
+    }
+
+    @Test
+    void createShortLink_ThrowsDataIntegrityViolation_WhenOriginalUrlIsNull() {
+        UrlMapping mapping = UrlMapping.builder()
+                .originalUrl(null)
+                .shortCode("someCode")
+                .alias(null)
+                .build();
+
+        assertThrows(DataIntegrityViolationException.class, () ->
+                repository.saveAndFlush(mapping));
+    }
+
+    @Test
+    void createShortLink_ThrowsEmptyOriginalUrlException_WhenOriginalUrlIsBlank() {
+        assertThrows(EmptyOriginalUrlException.class, () ->
+                urlService.createShortLink("   ", null, null));
+    }
+
+    @Test
+    void createShortLink_ThrowsDataIntegrityViolation_WhenDuplicateAlias() {
+        UrlMapping first = UrlMapping.builder()
+                .originalUrl("https://example.com/1")
+                .shortCode("code1")
+                .alias("myalias")
+                .build();
+        repository.saveAndFlush(first);
+
+        UrlMapping second = UrlMapping.builder()
+                .originalUrl("https://example.com/2")
+                .shortCode("code2")
+                .alias("myalias")
+                .build();
+
+        assertThrows(DataIntegrityViolationException.class, () ->
+                repository.saveAndFlush(second));
     }
 }
